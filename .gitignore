@@ -1,0 +1,26 @@
+# Build output
+.gradle/
+build/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+dist/
+
+# Local machine / IDE
+/local.properties
+.idea/
+*.iml
+
+# Signing: NEVER commit these
+keystore/
+keystore.properties
+*.jks
+*.keystore
+
+# Personal working files
+design/Initial Prompt*.txt
+Testing Screenshots/
+PUBLISHING-NEXT-STEPS.md

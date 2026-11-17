@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Worm</string>
+    <string name="widget_read_desc">Your books in progress, from one cover to a shelf</string>
+    <string name="widget_listen_desc">Your audiobooks in progress, from one cover to a shelf</string>
+    <string name="widget_resume_desc">Books and audiobooks you\'re partway through</string>
+    <string name="widget_player_desc">Play, pause and skip without opening Worm</string>
+    <string name="widget_week_desc">Time listened, time read and books finished this week</string>
+    <string name="widget_month_desc">Time listened, time read and books finished this month</string>
+    <string name="widget_game_desc">Your best Bookworm score. Tap to play</string>
+</resources>

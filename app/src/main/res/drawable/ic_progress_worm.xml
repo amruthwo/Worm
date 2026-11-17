@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The little worm that crawls along progress bars in notifications. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:strokeColor="#FF2A0E3A" android:strokeWidth="5.4" android:strokeLineCap="round"
+        android:pathData="M3,17 C5,13 7,13 9,16 C11,19 13,19 15,15" />
+    <path android:strokeColor="#FFE46FB4" android:strokeWidth="3.8" android:strokeLineCap="round"
+        android:pathData="M3,17 C5,13 7,13 9,16 C11,19 13,19 15,15" />
+    <path android:fillColor="#FF2A0E3A" android:pathData="M14.2,10.5 a4.6,4.6 0 1,0 9.2,0 a4.6,4.6 0 1,0 -9.2,0Z" />
+    <path android:fillColor="#FFE46FB4" android:pathData="M15,10.5 a3.8,3.8 0 1,0 7.6,0 a3.8,3.8 0 1,0 -7.6,0Z" />
+    <path android:fillColor="#FF2A0E3A" android:pathData="M17.4,9.6 a0.6,0.8 0 1,0 1.2,0 a0.6,0.8 0 1,0 -1.2,0Z M19.8,9.6 a0.6,0.8 0 1,0 1.2,0 a0.6,0.8 0 1,0 -1.2,0Z" />
+    <path android:strokeColor="#FF98E8DE" android:strokeWidth="1.4" android:strokeLineCap="round" android:pathData="M15.2,9.4 C15.2,5.4 22.4,5.4 22.4,9.4" />
+</vector>

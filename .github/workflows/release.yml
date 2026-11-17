@@ -1,0 +1,60 @@
+name: Release
+
+# Push a tag like v0.7.0 to build signed APKs and publish a GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      # GitHub's Ubuntu runners ship the Android SDK; just accept licenses and add platform 37.
+      - name: Install SDK platform 37
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "platforms;android-37.0" "build-tools;36.1.0" > /dev/null
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore signing key from secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.WORM_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > keystore/release.jks
+
+      - name: Build signed release APKs
+        env:
+          WORM_KEYSTORE_FILE: keystore/release.jks
+          WORM_KEYSTORE_PASSWORD: ${{ secrets.WORM_KEYSTORE_PASSWORD }}
+          WORM_KEY_ALIAS: ${{ secrets.WORM_KEY_ALIAS }}
+          WORM_KEY_PASSWORD: ${{ secrets.WORM_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --console=plain
+
+      - name: Name the APKs
+        run: |
+          V="${GITHUB_REF_NAME#v}"
+          mkdir -p out
+          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk   "out/Worm-$V-arm64.apk"
+          cp app/build/outputs/apk/release/app-armeabi-v7a-release.apk "out/Worm-$V-armv7.apk"
+          cp app/build/outputs/apk/release/app-x86_64-release.apk      "out/Worm-$V-x86_64.apk"
+          CODE=$(grep -oP 'versionCode = \K\d+' app/build.gradle.kts)
+          cp "fastlane/metadata/android/en-US/changelogs/$CODE.txt" out/notes.md 2>/dev/null || echo "See CHANGELOG.md" > out/notes.md
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: out/notes.md
+          files: out/*.apk
+
+      - name: Remove the key
+        if: always()
+        run: rm -f keystore/release.jks

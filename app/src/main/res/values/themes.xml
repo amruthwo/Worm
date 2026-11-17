@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Deep plum window background so there is never a white flash before Compose draws. -->
+    <style name="Theme.Worm" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/worm_night</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <color name="worm_night">#FF160A21</color>
+</resources>

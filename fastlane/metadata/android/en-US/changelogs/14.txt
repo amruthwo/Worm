@@ -1,0 +1,8 @@
+First public release of Worm: books and audiobooks in one app.
+
+- Library from your own folders, shelves, search, magic match for covers and details, and the Burrow (a locked private shelf)
+- Reader for EPUB, MOBI, AZW3, FB2, CBZ and more: themes, fonts, highlights, notes, dictionary, Wikipedia, speed reading
+- Audiobook player with chapters, sleep timer, smart rewind and Android Auto
+- Silk Spinner (MP3 folders to M4B) and Metamorphosis (many formats to EPUB)
+- KOReader and Readest sync, Wormhole sharing between devices, OPDS catalogs, downloads
+- Home screen widgets, six themes including E-ink, game controller support

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<!-- Worm reader host page. Renders books with foliate-js (MIT) and talks to Kotlin via window.Worm. -->
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg, #fbf7ef); color: var(--fg, #222); }
+  foliate-view { display: block; position: fixed; inset: 0; width: 100vw; height: 100vh; }
+  #veil { position: fixed; inset: 0; background: var(--bg, #fbf7ef); transition: opacity .35s; pointer-events: none; }
+  #veil.gone { opacity: 0; }
+</style>
+</head>
+<body>
+<div id="veil"></div>
+<script type="module" src="reader.js"></script>
+</body>
+</html>
