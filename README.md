@@ -1,8 +1,4 @@
-<p align="center"><img src="design/worm-icon-512.png" width="128" alt="Worm icon"></p>
-
-<h1 align="center">Worm</h1>
-
-<p align="center"><b>Books and audiobooks in one app.</b> Read it. Hear it. Worm it.</p>
+<p align="center"><img src="fastlane/metadata/android/en-US/images/featureGraphic.png" alt="Worm: books and audiobooks in one app"></p>
 
 <p align="center">
   <a href="LICENSE"><img alt="License: GPL-3.0-or-later" src="https://img.shields.io/badge/license-GPL--3.0--or--later-8E1EA2"></a>

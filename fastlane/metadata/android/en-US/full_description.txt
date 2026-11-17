@@ -1,0 +1,20 @@
+<p><b>Worm</b> is a free, open-source app for your own ebooks <i>and</i> audiobooks. It reads them where they already live on your phone, keeps your place in both, and works with your car, your e-reader, your other devices and other reading apps. No accounts, no ads, no tracking.</p>
+
+<p><b>Library</b></p>
+<ul>
+<li>Uses the folders you already have; groups multi-file audiobooks, series and authors</li>
+<li>Shelves, filters, sorting, grouping and search</li>
+<li>Fix titles, series and covers by hand or with magic match</li>
+<li>The Burrow: a PIN/biometric-locked private shelf</li>
+<li>Back up all your library edits to one file</li>
+</ul>
+
+<p><b>Reading</b>: EPUB, MOBI, AZW3, FB2, CBZ, TXT and more. Themes, fonts, margins, two-page view, highlights, notes, bookmarks, search, offline dictionaries, Wiktionary, Wikipedia and speed reading.</p>
+
+<p><b>Listening</b>: M4B, MP3 and more, with chapters, speed, sleep timer, smart rewind, bookmarks and Android Auto.</p>
+
+<p><b>Tools</b>: turn MP3 folders into chaptered M4B (Silk Spinner), turn many formats into EPUB (Metamorphosis), share books between devices over Wi-Fi (Wormhole), browse OPDS catalogs and download books.</p>
+
+<p><b>Sync</b>: KOReader sync and Readest cloud.</p>
+
+<p><b>Also</b>: home screen widgets, reading and listening stats, six themes including E-ink, and full game controller / D-pad support.</p>
