@@ -1,0 +1,1 @@
+- Widgets redraw themselves after an update or a restart instead of showing a loading spinner

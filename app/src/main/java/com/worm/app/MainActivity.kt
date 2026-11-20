@@ -96,6 +96,8 @@ class MainActivity : FragmentActivity() {
         )
         super.onCreate(savedInstanceState)
         com.worm.app.widget.Widgets.syncGameWidget(this)
+        // Widgets stuck on a spinner (after an update or a reboot) come back whenever Worm opens.
+        if (savedInstanceState == null) com.worm.app.widget.Widgets.refreshAll(this)
         handle(intent)
         setContent {
             val vm: WormViewModel = viewModel()
