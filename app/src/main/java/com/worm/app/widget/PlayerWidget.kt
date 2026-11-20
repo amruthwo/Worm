@@ -62,7 +62,7 @@ class PlayerWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val item = Widgets.nowPlaying(context)
-        val bmp = item?.let { Widgets.cover(it.book, 360) }
+        val bmp = item?.let { Widgets.cover(it.book, 320) }
         val lib = Library.get(context)
         val prefs = lib.prefs
         val chapter = PlayerHub.chapterTitle.value

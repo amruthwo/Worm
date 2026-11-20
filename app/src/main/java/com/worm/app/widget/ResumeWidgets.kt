@@ -90,7 +90,8 @@ private fun ResumeContent(kind: String, items: List<Widgets.Item>, covers: Map<S
         wide -> Column(root.padding(10.dp)) {
             Header(kind)
             val perRow = 3
-            val rows = if (tall) 2 else 1
+            // One row of bigger covers even when tall: two rows of six covers overflow what a widget can send.
+            val rows = 1
             val tileW = (size.width - 20.dp - 16.dp) / perRow
             val tileH = (size.height - 20.dp - 26.dp) / rows - 26.dp
             items.take(perRow * rows).chunked(perRow).forEach { row ->
@@ -109,6 +110,16 @@ private fun ResumeContent(kind: String, items: List<Widgets.Item>, covers: Map<S
             items.take(4).forEach { ListRow(it, covers[it.book.id], corners) }
         }
         // Square-ish: one book, big.
+        // Small square: cover on top, progress and title under it.
+        size.width >= 100.dp && size.height >= 100.dp && size.width < 200.dp -> {
+            val it = items.first()
+            Column(root.padding(8.dp).clickable(actionStartActivity(Widgets.openBookIntent(context, it.book))), horizontalAlignment = Alignment.CenterHorizontally) {
+                Cover(it, covers[it.book.id], corners, size.width - 16.dp, size.height - 16.dp - 30.dp)
+                Spacer(GlanceModifier.height(4.dp))
+                Progress(it)
+                Text(it.book.title, maxLines = 1, style = TextStyle(color = c.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold))
+            }
+        }
         size.width >= 100.dp && size.height >= 100.dp -> {
             val it = items.first()
             Column(root.padding(10.dp).clickable(actionStartActivity(Widgets.openBookIntent(context, it.book)))) {
@@ -132,7 +143,7 @@ private fun ResumeContent(kind: String, items: List<Widgets.Item>, covers: Map<S
                 Cover(it, covers[it.book.id], corners, size.width * 0.4f, size.height - 12.dp)
                 Spacer(GlanceModifier.width(8.dp))
                 Column(GlanceModifier.defaultWeight()) {
-                    Text(it.book.title, maxLines = 2, style = TextStyle(color = c.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold))
+                    Text(it.book.title, maxLines = if (size.height < 90.dp) 1 else 2, style = TextStyle(color = c.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold))
                     Text("${((it.progress?.fraction ?: 0f) * 100).toInt()}%", style = TextStyle(color = c.primary, fontSize = 11.sp))
                 }
             }

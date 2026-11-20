@@ -112,6 +112,14 @@ private fun StatsContent(title: String, total: DayActivity, bars: List<Pair<Stri
             Stat(Widgets.fmtHours(total.listenSec), "listened", GlanceModifier.defaultWeight(), small)
             Stat(Widgets.fmtHours(total.readSec), "read", GlanceModifier.defaultWeight(), small)
             Stat("${total.finished}", "finished", GlanceModifier.defaultWeight(), small)
+        } else if (h >= 140.dp) Column(GlanceModifier.fillMaxWidth()) {
+            // Narrow but tall (2×2): the three numbers stacked as compact lines.
+            listOf(Widgets.fmtHours(total.listenSec) to "listened", Widgets.fmtHours(total.readSec) to "read", "${total.finished}" to "finished").forEach { (v, l) ->
+                Row(GlanceModifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(v, maxLines = 1, style = TextStyle(color = c.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold), modifier = GlanceModifier.width(64.dp))
+                    Text(l, maxLines = 1, style = TextStyle(color = c.onSurfaceVariant, fontSize = 12.sp))
+                }
+            }
         } else Column(GlanceModifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             // Tiny: total time, with the period as the label.
             Stat(Widgets.fmtHours(total.listenSec + total.readSec), if (title == "This week") "this week" else "this month", GlanceModifier.fillMaxWidth(), small)

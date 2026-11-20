@@ -85,13 +85,17 @@ object Widgets {
     }
 
     /** Small, fixed-size covers keep widgets under the launcher's memory limit. */
-    fun cover(book: Book, px: Int = 280): Bitmap? = runCatching {
+    fun cover(book: Book, px: Int = 200): Bitmap? = runCatching {
         val path = book.coverPath ?: return null
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(path, bounds)
         var sample = 1
         while (bounds.outWidth / (sample * 2) >= px && bounds.outHeight / (sample * 2) >= px) sample *= 2
-        BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+        // RGB_565: half the bytes of full colour, and covers have no transparency to lose.
+        val bmp = BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample; inPreferredConfig = Bitmap.Config.RGB_565 }) ?: return null
+        // Widgets send their pictures to the launcher in one parcel with a size cap, so keep each cover small.
+        val scale = px.toFloat() / maxOf(bmp.width, bmp.height)
+        if (scale >= 1f) bmp else Bitmap.createScaledBitmap(bmp, (bmp.width * scale).toInt().coerceAtLeast(1), (bmp.height * scale).toInt().coerceAtLeast(1), true)
     }.getOrNull()
 
     /** Width/height of a cover (from the image itself; a typical book or square audiobook if there's none). */
