@@ -217,6 +217,13 @@ fun SettingsScreen(vm: WormViewModel, snackbar: SnackbarHostState, onBack: () ->
                 }
                 }
                 if (unlockedGame) TextButton(onClick = onPlayGame) { Text("🪱 Play Bookworm") }
+                // Website, source code and new versions (Worm isn't on an app store yet).
+                fun open(url: String) = runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                    androidx.compose.material3.FilledTonalButton(onClick = { open("https://github.com/amruthwo/Worm/releases/latest") }) { Text("Check for updates") }
+                    androidx.compose.material3.OutlinedButton(onClick = { open("https://github.com/amruthwo/Worm") }) { Text("Worm on GitHub") }
+                    TextButton(onClick = { open("https://github.com/amruthwo/Worm/issues") }) { Text("Report a bug") }
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Free software under the GNU GPL v3 (or later).\n" +

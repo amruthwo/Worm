@@ -1,0 +1,4 @@
+- Books open on older e-readers (Supernote, Boox, Kobo) whose built-in browser is older
+- Readest/KOSync no longer ask you to jump when the other spot is your own, or only a few pages away
+- Now Playing widget: tapping the cover or Play resumes your audiobook even when Worm is closed; fits one-row-tall sizes
+- Settings › About: Check for updates, Worm on GitHub, Report a bug

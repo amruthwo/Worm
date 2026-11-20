@@ -80,7 +80,8 @@ private fun PlayerContent(item: Widgets.Item?, bmp: android.graphics.Bitmap?, pl
     val context = LocalContext.current
     val c = GlanceTheme.colors
     val root = GlanceModifier.fillMaxSize().background(c.surface).cornerRadius(corners.dp)
-    val openPlayer = actionStartActivity(Widgets.openScreenIntent(context, "player"))
+    // The cover opens the book itself (which resumes it), not an empty player screen.
+    val openPlayer = actionStartActivity(item?.let { Widgets.openBookIntent(context, it.book) } ?: Widgets.openScreenIntent(context, "player"))
 
     @Composable fun CoverImg(maxW: androidx.compose.ui.unit.Dp, maxH: androidx.compose.ui.unit.Dp) {
         val r = (corners / 2).coerceAtLeast(6).dp
@@ -93,14 +94,16 @@ private fun PlayerContent(item: Widgets.Item?, bmp: android.graphics.Bitmap?, pl
         }
     }
 
+    // Short widgets (one row tall): buttons shrink to fit the height.
+    val maxBtn = (size.height - 12.dp).coerceIn(28.dp, 52.dp)
     @Composable fun Btn(icon: Int, label: String, action: androidx.glance.action.Action, big: Boolean = false) {
-        val s = if (big) 52.dp else 40.dp
+        val s = (if (big) 52.dp else 40.dp).coerceAtMost(maxBtn)
         Box(
             GlanceModifier.size(s).cornerRadius(s / 2).background(if (big) c.primary else c.secondaryContainer).clickable(action),
             contentAlignment = Alignment.Center,
         ) {
             Image(
-                ImageProvider(icon), label, GlanceModifier.size(if (big) 28.dp else 22.dp),
+                ImageProvider(icon), label, GlanceModifier.size(s * 0.55f),
                 colorFilter = ColorFilter.tint(if (big) c.onPrimary else c.onSecondaryContainer),
             )
         }
@@ -210,8 +213,20 @@ private suspend fun withPlayer(context: Context, block: (MediaController) -> Uni
 }
 
 class PlayPauseAction : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) =
-        withPlayer(context) { c -> if (c.isPlaying) c.pause() else { if (c.playbackState == androidx.media3.common.Player.STATE_IDLE) c.prepare(); c.play() } }
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val next = Widgets.nowPlaying(context)
+        withPlayer(context) { c ->
+            when {
+                c.isPlaying -> c.pause()
+                else -> {
+                    // Nothing loaded yet (Worm was closed): load the audiobook the widget shows, at your spot.
+                    if (c.mediaItemCount == 0 && next != null) c.setMediaItem(PlayerHub.bookItem(context, next.book, next.progress))
+                    if (c.playbackState == androidx.media3.common.Player.STATE_IDLE) c.prepare()
+                    c.play()
+                }
+            }
+        }
+    }
 }
 
 class SkipBackAction : ActionCallback {

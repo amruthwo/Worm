@@ -27,8 +27,8 @@ android {
         applicationId = "com.worm.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.7.0"
+        versionCode = 15
+        versionName = "0.7.1"
     }
 
     // One fixed key so every build installs as an update over the last.

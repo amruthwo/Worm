@@ -170,6 +170,8 @@ fun ReaderScreen(book: Book, library: Library, onBack: () -> Unit, say: (String)
         syncScope.launch(kotlinx.coroutines.NonCancellable) {
             com.worm.app.sync.ProgressSync.push(ctx, book.id, l.cfi, l.xpointer, l.fraction, l.page, l.pages)
         }
+        // Remember what we sent, so it isn't offered back to us as "newer elsewhere".
+        ctx.getSharedPreferences("worm_sync_sent", 0).edit().putString(book.id, l.cfi).putString(book.id + ":xp", l.xpointer).apply()
         lastPush = System.currentTimeMillis()
     }
     DisposableEffect(book.id) {
@@ -217,8 +219,13 @@ fun ReaderScreen(book: Book, library: Library, onBack: () -> Unit, say: (String)
             val localAt = library.progress.value[book.id]?.movedAt?.takeIf { manual } ?: saved?.movedAt ?: 0L
             val best = com.worm.app.sync.ProgressSync.pull(ctx, book.id).maxByOrNull { it.updatedAt }
             android.util.Log.d("WormSync", "remote=${best?.source} at ${best?.updatedAt} spine=${best?.let(::spineOf)} · local moved $localAt spine=${spineOf(l.cfi)}")
-            val different = best != null && best.cfi != l.cfi && best.xpointer != l.xpointer &&
-                (spineOf(best) != spineOf(l.cfi) || kotlin.math.abs(best.fraction - l.fraction) > 0.005f)
+            val sent = ctx.getSharedPreferences("worm_sync_sent", 0)
+            val ours = best != null && ((best.cfi != null && best.cfi == sent.getString(book.id, null)) ||
+                (best.xpointer != null && best.xpointer == sent.getString(book.id + ":xp", null)))
+            // Close enough not to bother you: same chapter and within 2% of the book (a few pages).
+            // Another chapter always counts, however close the percentages look.
+            val different = best != null && !ours && best.cfi != l.cfi && best.xpointer != l.xpointer &&
+                (spineOf(best) != spineOf(l.cfi) || kotlin.math.abs(best.fraction - l.fraction) > SYNC_CLOSE_ENOUGH)
             when {
                 best != null && different && (manual || best.updatedAt > localAt - 5_000) -> remoteOffer = best
                 manual -> { pushNow(l); say(if (best == null) "Sent your spot (nothing saved elsewhere yet)" else "You're up to date; sent your spot") }
@@ -1041,6 +1048,9 @@ private fun currentSystemBrightness(context: android.content.Context): Float =
 
 
 /** Which spine item (chapter file) a CFI or KOReader XPointer points into, 0-based. */
+/** Remote spots closer than this (fraction of the book, same chapter) don't trigger the "jump?" prompt. */
+internal const val SYNC_CLOSE_ENOUGH = 0.02f
+
 internal fun spineOf(cfi: String?): Int? = cfi?.let { Regex("""epubcfi\(/6/(\d+)""").find(it)?.groupValues?.get(1)?.toIntOrNull()?.let { n -> n / 2 - 1 } }
 internal fun spineOf(r: com.worm.app.sync.RemotePosition): Int? =
     spineOf(r.cfi) ?: r.xpointer?.let { Regex("""DocFragment(?:\[(\d+)\])?""").find(it)?.groupValues?.get(1)?.toIntOrNull()?.minus(1) ?: 0 }
