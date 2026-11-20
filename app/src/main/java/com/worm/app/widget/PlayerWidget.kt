@@ -74,115 +74,180 @@ class PlayerWidget : GlanceAppWidget() {
 
 class PlayerWidgetReceiver : GlanceAppWidgetReceiver() { override val glanceAppWidget: GlanceAppWidget = PlayerWidget() }
 
+/**
+ * Lays itself out from the widget's real size, so cover and controls stay visible at any size:
+ * - tiny (1×1): cover with a play button on it
+ * - one row tall: cover, title if there's room, as many buttons as fit
+ * - narrow column: cover over the play button (skip buttons too when tall)
+ * - wide: cover on the left; title, progress and buttons on the right
+ * - square or tall: cover on top; title, progress and buttons underneath
+ * Buttons appear by priority: play, then skip back/forward, then chapter jumps.
+ */
 @Composable
 private fun PlayerContent(item: Widgets.Item?, bmp: android.graphics.Bitmap?, playing: Boolean, chapter: String?, back: Int, fwd: Int, corners: Int) {
     val size = LocalSize.current
     val context = LocalContext.current
     val c = GlanceTheme.colors
-    val root = GlanceModifier.fillMaxSize().background(c.surface).cornerRadius(corners.dp)
+    val w = size.width; val h = size.height
+    val pad = if (minOf(w, h) < 90.dp) 6.dp else 10.dp
+    val root = GlanceModifier.fillMaxSize().background(c.surface).cornerRadius(corners.dp).padding(pad)
     // The cover opens the book itself (which resumes it), not an empty player screen.
-    val openPlayer = actionStartActivity(item?.let { Widgets.openBookIntent(context, it.book) } ?: Widgets.openScreenIntent(context, "player"))
+    val openBook = actionStartActivity(item?.let { Widgets.openBookIntent(context, it.book) } ?: Widgets.openScreenIntent(context, "player"))
 
     @Composable fun CoverImg(maxW: androidx.compose.ui.unit.Dp, maxH: androidx.compose.ui.unit.Dp) {
         val r = (corners / 2).coerceAtLeast(6).dp
-        val fit = Widgets.fit(Widgets.aspect(bmp, true), maxW, maxH)
-        Box(GlanceModifier.width(maxW.coerceAtLeast(8.dp)).height(maxH.coerceAtLeast(8.dp)), contentAlignment = Alignment.Center) {
-            if (bmp != null) Image(ImageProvider(bmp), item?.book?.title, GlanceModifier.size(fit.width, fit.height).cornerRadius(r).clickable(openPlayer), contentScale = ContentScale.Crop)
-            else Box(GlanceModifier.size(fit.width, fit.height).cornerRadius(r).background(c.primaryContainer).clickable(openPlayer), contentAlignment = Alignment.Center) {
-                Image(ImageProvider(R.drawable.worm_logo), null, GlanceModifier.size(32.dp))
+        val fit = Widgets.fit(Widgets.aspect(bmp, true), maxW.coerceAtLeast(16.dp), maxH.coerceAtLeast(16.dp))
+        Box(GlanceModifier.width(maxW.coerceAtLeast(16.dp)).height(maxH.coerceAtLeast(16.dp)), contentAlignment = Alignment.Center) {
+            if (bmp != null) Image(ImageProvider(bmp), item?.book?.title, GlanceModifier.size(fit.width, fit.height).cornerRadius(r).clickable(openBook), contentScale = ContentScale.Crop)
+            else Box(GlanceModifier.size(fit.width, fit.height).cornerRadius(r).background(c.primaryContainer).clickable(openBook), contentAlignment = Alignment.Center) {
+                Image(ImageProvider(R.drawable.worm_logo), null, GlanceModifier.size((fit.width * 0.6f).coerceAtMost(40.dp)))
             }
         }
     }
 
-    // Short widgets (one row tall): buttons shrink to fit the height.
-    val maxBtn = (size.height - 12.dp).coerceIn(28.dp, 52.dp)
-    @Composable fun Btn(icon: Int, label: String, action: androidx.glance.action.Action, big: Boolean = false) {
-        val s = (if (big) 52.dp else 40.dp).coerceAtMost(maxBtn)
+    @Composable fun Btn(icon: Int, label: String, action: androidx.glance.action.Action, s: androidx.compose.ui.unit.Dp, primary: Boolean = false) {
         Box(
-            GlanceModifier.size(s).cornerRadius(s / 2).background(if (big) c.primary else c.secondaryContainer).clickable(action),
+            GlanceModifier.size(s).cornerRadius(s / 2).background(if (primary) c.primary else c.secondaryContainer).clickable(action),
             contentAlignment = Alignment.Center,
         ) {
-            Image(
-                ImageProvider(icon), label, GlanceModifier.size(s * 0.55f),
-                colorFilter = ColorFilter.tint(if (big) c.onPrimary else c.onSecondaryContainer),
-            )
+            Image(ImageProvider(icon), label, GlanceModifier.size(s * 0.55f), colorFilter = ColorFilter.tint(if (primary) c.onPrimary else c.onSecondaryContainer))
         }
     }
 
-    val playPause = actionRunCallback<PlayPauseAction>()
+    // Play/pause goes to the player as a media-button press, like headphones do, so it can start
+    // playback in the background even when Worm is closed.
+    val playPause = mediaKey(context, android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
     val playIcon = if (playing) R.drawable.ic_w_pause else R.drawable.ic_w_play
     val playLabel = if (playing) "Pause" else "Play"
-    val backIcon = skipIcon(back, false)
-    val fwdIcon = skipIcon(fwd, true)
 
-    @Composable fun Titles(maxTitle: Int) {
-        Text(item?.book?.title ?: "Nothing playing", maxLines = maxTitle, style = TextStyle(color = c.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold))
-        Text(chapter ?: item?.book?.author ?: "Tap play to pick up your last audiobook", maxLines = 1, style = TextStyle(color = c.onSurfaceVariant, fontSize = 11.sp))
+    /** As many buttons as fit in [avail], most important first, play in the middle. */
+    @Composable fun Controls(avail: androidx.compose.ui.unit.Dp, s: androidx.compose.ui.unit.Dp) {
+        val gap = 6.dp
+        val n = ((avail + gap) / (s + gap)).toInt()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            @Composable fun Gap() = Spacer(GlanceModifier.width(gap))
+            if (n >= 5) { Btn(R.drawable.ic_w_prev, "Previous chapter", actionRunCallback<PrevChapterAction>(), s); Gap() }
+            if (n >= 3) { Btn(skipIcon(back, false), "Back ${back}s", mediaKey(context, android.view.KeyEvent.KEYCODE_MEDIA_REWIND), s); Gap() }
+            Btn(playIcon, playLabel, playPause, s, primary = true)
+            if (n >= 3) { Gap(); Btn(skipIcon(fwd, true), "Forward ${fwd}s", mediaKey(context, android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD), s) }
+            if (n >= 5) { Gap(); Btn(R.drawable.ic_w_next, "Next chapter", actionRunCallback<NextChapterAction>(), s) }
+        }
+    }
+    fun controlsWidth(avail: androidx.compose.ui.unit.Dp, s: androidx.compose.ui.unit.Dp): androidx.compose.ui.unit.Dp {
+        val n = ((avail + 6.dp) / (s + 6.dp)).toInt()
+        val k = when { n >= 5 -> 5; n >= 3 -> 3; else -> 1 }
+        return s * k + 6.dp * (k - 1)
+    }
+
+    @Composable fun Titles(lines: Int, center: Boolean = false) {
+        val align = if (center) androidx.glance.text.TextAlign.Center else androidx.glance.text.TextAlign.Start
+        Text(item?.book?.title ?: "Nothing playing", maxLines = lines, style = TextStyle(color = c.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = align), modifier = GlanceModifier.fillMaxWidth())
+        Text(chapter ?: item?.book?.author ?: "Press play to resume", maxLines = 1, style = TextStyle(color = c.onSurfaceVariant, fontSize = 11.sp, textAlign = align), modifier = GlanceModifier.fillMaxWidth())
     }
 
     @Composable fun Bar() {
         LinearProgressIndicator(
             progress = item?.progress?.fraction ?: 0f,
-            modifier = GlanceModifier.fillMaxWidth().height(5.dp).cornerRadius(3.dp),
+            modifier = GlanceModifier.fillMaxWidth().height(4.dp).cornerRadius(2.dp),
             color = c.primary, backgroundColor = c.surfaceVariant,
         )
     }
 
+    val iw = w - pad * 2; val ih = h - pad * 2
     when {
-        // Big: cover on top, the lot underneath.
-        size.height >= 250.dp -> Column(root.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            CoverImg(size.width - 24.dp, (size.height - 24.dp - 150.dp).coerceAtLeast(40.dp))
-            Spacer(GlanceModifier.height(8.dp))
-            Column(GlanceModifier.fillMaxWidth()) { Titles(1) }
-            Spacer(GlanceModifier.height(6.dp))
-            Bar()
-            item?.let {
-                val left = ((1f - (it.progress?.fraction ?: 0f)) * it.book.durationMs / 1000).toLong()
-                Text("${Widgets.fmtHours(left)} left", style = TextStyle(color = c.primary, fontSize = 11.sp), modifier = GlanceModifier.padding(top = 2.dp))
+        // 1×1: the cover, with play on it.
+        w < 110.dp && h < 120.dp -> Box(root, contentAlignment = Alignment.Center) {
+            CoverImg(iw, ih)
+            Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) { Btn(playIcon, playLabel, playPause, (minOf(iw, ih) * 0.45f).coerceIn(24.dp, 40.dp), primary = true) }
+        }
+        // One row tall: cover, buttons, and the title when there's room. Buttons beat the title.
+        h < 120.dp -> {
+            val s = ih.coerceIn(28.dp, 44.dp)
+            val coverW = minOf(ih, iw - s - 16.dp).coerceAtLeast(24.dp)
+            val rest = iw - coverW - 16.dp
+            val three = s * 3 + 12.dp
+            val (ctrl, showTitle) = when {
+                rest - three >= 80.dp -> three to true
+                rest >= three -> three to false
+                rest - s >= 80.dp -> s to true
+                else -> s to false
             }
-            Spacer(GlanceModifier.height(6.dp))
-            Row(GlanceModifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
-                if (size.width >= 250.dp) { Btn(R.drawable.ic_w_prev, "Previous chapter", actionRunCallback<PrevChapterAction>()); Spacer(GlanceModifier.width(6.dp)) }
-                Btn(backIcon, "Back ${back}s", actionRunCallback<SkipBackAction>()); Spacer(GlanceModifier.width(8.dp))
-                Btn(playIcon, playLabel, playPause, big = true); Spacer(GlanceModifier.width(8.dp))
-                Btn(fwdIcon, "Forward ${fwd}s", actionRunCallback<SkipForwardAction>())
-                if (size.width >= 250.dp) { Spacer(GlanceModifier.width(6.dp)); Btn(R.drawable.ic_w_next, "Next chapter", actionRunCallback<NextChapterAction>()) }
+            Row(root, verticalAlignment = Alignment.CenterVertically) {
+                CoverImg(coverW, ih)
+                Spacer(GlanceModifier.width(8.dp))
+                if (showTitle) Column(GlanceModifier.defaultWeight()) { Titles(if (ih >= 50.dp) 2 else 1) } else Spacer(GlanceModifier.defaultWeight())
+                Spacer(GlanceModifier.width(8.dp))
+                Controls(ctrl, s)
             }
         }
-        // Medium: cover left, titles + progress + controls right.
-        size.height >= 120.dp && size.width >= 180.dp -> Row(root.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            CoverImg(size.width * 0.4f, size.height - 20.dp)
-            Spacer(GlanceModifier.width(10.dp))
-            Column(GlanceModifier.defaultWeight()) {
-                Titles(2)
-                Spacer(GlanceModifier.height(6.dp))
-                Bar()
-                Spacer(GlanceModifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (size.width >= 250.dp) { Btn(R.drawable.ic_w_prev, "Previous chapter", actionRunCallback<PrevChapterAction>()); Spacer(GlanceModifier.width(4.dp)) }
-                    Btn(backIcon, "Back ${back}s", actionRunCallback<SkipBackAction>()); Spacer(GlanceModifier.width(6.dp))
-                    Btn(playIcon, playLabel, playPause, big = true); Spacer(GlanceModifier.width(6.dp))
-                    Btn(fwdIcon, "Forward ${fwd}s", actionRunCallback<SkipForwardAction>())
-                    if (size.width >= 250.dp) { Spacer(GlanceModifier.width(4.dp)); Btn(R.drawable.ic_w_next, "Next chapter", actionRunCallback<NextChapterAction>()) }
+        // Narrow column: cover over the buttons.
+        w < 130.dp -> {
+            val s = (iw * 0.5f).coerceIn(32.dp, 44.dp)
+            val twoRows = ih >= 260.dp
+            val ctrlH = if (twoRows) s * 2 + 6.dp else s
+            val coverH = (ih - ctrlH - 8.dp).coerceAtMost(iw / Widgets.aspect(bmp, true))
+            Column(root, horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
+                CoverImg(iw, coverH)
+                Spacer(GlanceModifier.height(8.dp))
+                Btn(playIcon, playLabel, playPause, s, primary = true)
+                if (twoRows) Row {
+                    Btn(skipIcon(back, false), "Back ${back}s", mediaKey(context, android.view.KeyEvent.KEYCODE_MEDIA_REWIND), (s * 0.8f))
+                    Spacer(GlanceModifier.width(6.dp))
+                    Btn(skipIcon(fwd, true), "Forward ${fwd}s", mediaKey(context, android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD), (s * 0.8f))
                 }
             }
         }
-        // One row: cover, title, buttons.
-        size.width >= 120.dp -> Row(root.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            CoverImg(size.width * 0.3f, size.height - 12.dp)
-            Spacer(GlanceModifier.width(8.dp))
-            if (size.width >= 180.dp) Column(GlanceModifier.defaultWeight()) { Titles(1) } else Spacer(GlanceModifier.defaultWeight())
-            if (size.width >= 250.dp) { Btn(backIcon, "Back ${back}s", actionRunCallback<SkipBackAction>()); Spacer(GlanceModifier.width(4.dp)) }
-            Btn(playIcon, playLabel, playPause)
-            if (size.width >= 180.dp) { Spacer(GlanceModifier.width(4.dp)); Btn(fwdIcon, "Forward ${fwd}s", actionRunCallback<SkipForwardAction>()) }
+        // Wide: cover left, everything else right.
+        w >= h * 1.35f -> {
+            val s = ((ih - 44.dp) * 0.8f).coerceIn(30.dp, if (ih < 180.dp) 40.dp else 44.dp)
+            // Leave room for at least back / play / forward beside the cover.
+            val coverW = minOf(ih, iw * 0.5f, iw - 10.dp - (s * 3 + 12.dp)).coerceAtLeast(48.dp)
+            val right = iw - coverW - 10.dp
+            Row(root, verticalAlignment = Alignment.CenterVertically) {
+                CoverImg(coverW, ih)
+                Spacer(GlanceModifier.width(10.dp))
+                Column(GlanceModifier.defaultWeight()) {
+                    Titles(if (ih >= 150.dp) 2 else 1)
+                    Spacer(GlanceModifier.height(6.dp))
+                    Bar()
+                    Spacer(GlanceModifier.height(6.dp))
+                    Controls(right, s)
+                }
+            }
         }
-        // 1×2: cover with play underneath.
-        else -> Column(root.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            CoverImg(size.width - 12.dp, size.height - 12.dp - 46.dp)
-            Spacer(GlanceModifier.height(6.dp))
-            Btn(playIcon, playLabel, playPause)
+        // Small square: cover and buttons only, no room for words.
+        ih < 200.dp -> {
+            val s = (iw / 5).coerceIn(28.dp, 40.dp)
+            Column(root, horizontalAlignment = Alignment.CenterHorizontally) {
+                CoverImg(iw, ih - s - 8.dp)
+                Spacer(GlanceModifier.height(8.dp))
+                Controls(iw, s)
+            }
+        }
+        // Square or tall: cover on top.
+        else -> {
+            val s = (iw / 6).coerceIn(32.dp, 48.dp)
+            val below = 34.dp + 12.dp + s + 12.dp
+            Column(root, horizontalAlignment = Alignment.CenterHorizontally) {
+                CoverImg(iw, ih - below)
+                Spacer(GlanceModifier.height(6.dp))
+                Titles(1, center = true)
+                Spacer(GlanceModifier.height(4.dp))
+                Bar()
+                Spacer(GlanceModifier.height(6.dp))
+                Controls(iw, s)
+            }
         }
     }
+}
+
+/** A media-button press straight to the player service: works when Worm is closed, like headphones. */
+private fun mediaKey(context: Context, code: Int): androidx.glance.action.Action {
+    val intent = android.content.Intent(android.content.Intent.ACTION_MEDIA_BUTTON)
+        .setComponent(ComponentName(context, PlaybackService::class.java))
+        .putExtra(android.content.Intent.EXTRA_KEY_EVENT, android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, code))
+        .setData(android.net.Uri.parse("worm://media/$code")) // keeps each button's intent distinct
+    return androidx.glance.appwidget.action.actionStartService(intent, isForegroundService = true)
 }
 
 private fun skipIcon(sec: Int, forward: Boolean): Int = when (sec) {

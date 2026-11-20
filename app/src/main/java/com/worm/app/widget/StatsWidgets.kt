@@ -48,9 +48,7 @@ import java.util.Locale
 
 /** This week (Mon–Sun) or this month: time listened, time read, books finished, with little bars. */
 abstract class BaseStatsWidget(private val monthly: Boolean) : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Responsive(
-        setOf(DpSize(120.dp, 120.dp), DpSize(250.dp, 120.dp), DpSize(250.dp, 180.dp)),
-    )
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val lib = Library.get(context)
@@ -91,33 +89,45 @@ private fun StatsContent(title: String, total: DayActivity, bars: List<Pair<Stri
     val size = LocalSize.current
     val context = LocalContext.current
     val c = GlanceTheme.colors
-    Column(
-        GlanceModifier.fillMaxSize().background(c.surface).cornerRadius(corners.dp).padding(12.dp)
-            .clickable(actionStartActivity(Widgets.openScreenIntent(context, "stats"))),
-    ) {
-        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Image(ImageProvider(R.drawable.worm_logo), null, GlanceModifier.size(18.dp))
-            Spacer(GlanceModifier.width(6.dp))
-            Text(title, style = TextStyle(color = c.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold))
+    val w = size.width; val h = size.height
+    val small = w < 110.dp || h < 90.dp
+    val pad = if (small) 6.dp else 12.dp
+    val root = GlanceModifier.fillMaxSize().background(c.surface).cornerRadius(corners.dp).padding(pad)
+        .clickable(actionStartActivity(Widgets.openScreenIntent(context, "stats")))
+    // Bigger widgets show more: one number → three numbers → header → bars.
+    val showHeader = h >= 110.dp && w >= 110.dp
+    val showAll = w >= 150.dp
+    val barSpace = h - pad * 2 - (if (showHeader) 24.dp else 0.dp) - 48.dp - 18.dp
+    val showBars = w >= 200.dp && barSpace >= 30.dp
+    Column(root, verticalAlignment = if (showBars) Alignment.Top else Alignment.CenterVertically) {
+        if (showHeader) {
+            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Image(ImageProvider(R.drawable.worm_logo), null, GlanceModifier.size(18.dp))
+                Spacer(GlanceModifier.width(6.dp))
+                Text(title, maxLines = 1, style = TextStyle(color = c.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold))
+            }
+            Spacer(GlanceModifier.height(6.dp))
         }
-        Spacer(GlanceModifier.height(6.dp))
-        Row(GlanceModifier.fillMaxWidth()) {
-            Stat(Widgets.fmtHours(total.listenSec), "listened", GlanceModifier.defaultWeight())
-            Stat(Widgets.fmtHours(total.readSec), "read", GlanceModifier.defaultWeight())
-            Stat("${total.finished}", "finished", GlanceModifier.defaultWeight())
+        if (showAll) Row(GlanceModifier.fillMaxWidth()) {
+            Stat(Widgets.fmtHours(total.listenSec), "listened", GlanceModifier.defaultWeight(), small)
+            Stat(Widgets.fmtHours(total.readSec), "read", GlanceModifier.defaultWeight(), small)
+            Stat("${total.finished}", "finished", GlanceModifier.defaultWeight(), small)
+        } else Column(GlanceModifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            // Tiny: total time, with the period as the label.
+            Stat(Widgets.fmtHours(total.listenSec + total.readSec), if (title == "This week") "this week" else "this month", GlanceModifier.fillMaxWidth(), small)
         }
-        if (size.width >= 250.dp) {
+        if (showBars) {
             Spacer(GlanceModifier.height(8.dp))
-            Bars(bars, today, (size.height - 110.dp).coerceAtLeast(28.dp))
+            Bars(bars, today, barSpace.coerceAtMost(120.dp))
         }
     }
 }
 
 @Composable
-private fun Stat(value: String, label: String, modifier: GlanceModifier) {
+private fun Stat(value: String, label: String, modifier: GlanceModifier, small: Boolean = false) {
     val c = GlanceTheme.colors
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = TextStyle(color = c.primary, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
+        Text(value, maxLines = 1, style = TextStyle(color = c.primary, fontSize = if (small) 16.sp else 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
         Text(label, style = TextStyle(color = c.onSurfaceVariant, fontSize = 11.sp, textAlign = TextAlign.Center))
     }
 }
