@@ -27,6 +27,14 @@ import kotlinx.coroutines.launch
 object Widgets {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var pending: Job? = null
+
+    /**
+     * Bumped whenever a widget's data changes. Widgets read these inside their content, so a running
+     * widget recalculates instead of redrawing the values it captured when it first started.
+     */
+    val resumeTick = kotlinx.coroutines.flow.MutableStateFlow(0L)
+    val playerTick = kotlinx.coroutines.flow.MutableStateFlow(0L)
+    val statsTick = kotlinx.coroutines.flow.MutableStateFlow(0L)
     private var pendingStats: Job? = null
 
     /** Worm's own plum-and-candy colours (the default), or the wallpaper's (Material You). */
@@ -131,13 +139,14 @@ object Widgets {
         pending?.cancel()
         pending = scope.launch {
             delay(1_500)
+            resumeTick.value++
             runCatching { ReadWidget().updateAll(app); ListenWidget().updateAll(app); ResumeWidget().updateAll(app) }
         }
     }
 
     fun refreshPlayer(context: Context) {
         val app = context.applicationContext
-        scope.launch { runCatching { PlayerWidget().updateAll(app) } }
+        scope.launch { playerTick.value++; runCatching { PlayerWidget().updateAll(app) } }
     }
 
     fun refreshStats(context: Context) {
@@ -145,6 +154,7 @@ object Widgets {
         pendingStats?.cancel()
         pendingStats = scope.launch {
             delay(2_000)
+            statsTick.value++
             runCatching { WeekStatsWidget().updateAll(app); MonthStatsWidget().updateAll(app) }
         }
     }

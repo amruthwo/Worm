@@ -2,6 +2,9 @@ package com.worm.app.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -51,6 +54,17 @@ abstract class BaseStatsWidget(private val monthly: Boolean) : GlanceAppWidget()
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        provideContent {
+            // Re-read whenever the activity log changes (see Widgets.statsTick).
+            val tick by Widgets.statsTick.collectAsState()
+            val d = remember(tick) { compute(context) }
+            WormGlanceTheme { StatsContent(d.title, d.total, d.bars, d.today, d.corners) }
+        }
+    }
+
+    private class Data(val title: String, val total: DayActivity, val bars: List<Pair<String, DayActivity>>, val today: Int, val corners: Int)
+
+    private fun compute(context: Context): Data {
         val lib = Library.get(context)
         val days = lib.activity.value
         val today = LocalDate.now()
@@ -72,7 +86,7 @@ abstract class BaseStatsWidget(private val monthly: Boolean) : GlanceAppWidget()
         val total = DayActivity(inRange.sumOf { it.readSec }, inRange.sumOf { it.listenSec }, inRange.sumOf { it.finished })
         val title = if (monthly) today.month.getDisplayName(JTextStyle.FULL, Locale.getDefault()) else "This week"
         val corners = lib.prefs.widgetCorners
-        provideContent { WormGlanceTheme { StatsContent(title, total, bars, todayIndex(monthly, today, start), corners) } }
+        return Data(title, total, bars, todayIndex(monthly, today, start), corners)
     }
 
     private fun todayIndex(monthly: Boolean, today: LocalDate, start: LocalDate) =

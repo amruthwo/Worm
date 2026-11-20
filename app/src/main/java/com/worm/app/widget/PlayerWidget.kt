@@ -3,6 +3,9 @@ package com.worm.app.widget
 import android.content.ComponentName
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,13 +64,15 @@ class PlayerWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val item = Widgets.nowPlaying(context)
-        val bmp = item?.let { Widgets.cover(it.book, 320) }
-        val lib = Library.get(context)
-        val prefs = lib.prefs
-        val chapter = PlayerHub.chapterTitle.value
+        val prefs = Library.get(context).prefs
         provideContent {
-            WormGlanceTheme { PlayerContent(item, bmp, PlaybackService.playing, chapter, prefs.skipBackSec, prefs.skipForwardSec, prefs.widgetCorners) }
+            // Re-read everything whenever playback changes (see Widgets.playerTick).
+            val tick by Widgets.playerTick.collectAsState()
+            val item = remember(tick) { Widgets.nowPlaying(context) }
+            val bmp = remember(item?.book?.id, item?.book?.coverPath) { item?.let { Widgets.cover(it.book, 320) } }
+            val playing = remember(tick) { PlaybackService.playing }
+            val chapter = remember(tick) { PlayerHub.chapterTitle.value }
+            WormGlanceTheme { PlayerContent(item, bmp, playing, chapter, prefs.skipBackSec, prefs.skipForwardSec, prefs.widgetCorners) }
         }
     }
 }

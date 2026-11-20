@@ -1,1 +1,2 @@
 - Widgets redraw themselves after an update or a restart instead of showing a loading spinner
+- Now Playing widget's play/pause button follows what's actually playing; progress and stats widgets stay current

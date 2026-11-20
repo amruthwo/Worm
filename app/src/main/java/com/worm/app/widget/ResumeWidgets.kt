@@ -2,6 +2,9 @@ package com.worm.app.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -50,10 +53,14 @@ abstract class BaseResumeWidget(private val kind: String) : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val items = Widgets.resumeItems(context, kind)
-        val covers = items.associate { it.book.id to Widgets.cover(it.book) }
-        val corners = Library.get(context).prefs.widgetCorners
-        provideContent { WormGlanceTheme { ResumeContent(kind, items, covers, corners) } }
+        provideContent {
+            // Re-read whenever progress changes (see Widgets.resumeTick).
+            val tick by Widgets.resumeTick.collectAsState()
+            val items = remember(tick) { Widgets.resumeItems(context, kind) }
+            val covers = remember(items.map { it.book.id to it.book.coverPath }) { items.associate { it.book.id to Widgets.cover(it.book) } }
+            val corners = remember(tick) { Library.get(context).prefs.widgetCorners }
+            WormGlanceTheme { ResumeContent(kind, items, covers, corners) }
+        }
     }
 }
 
