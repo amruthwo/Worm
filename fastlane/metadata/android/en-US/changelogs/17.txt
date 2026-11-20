@@ -1,0 +1,2 @@
+- Now Playing widget's play/pause button follows what's actually playing
+- Progress and stats widgets stay up to date
